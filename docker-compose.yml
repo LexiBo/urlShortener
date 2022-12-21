@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  db2:
+    container_name: postgres_container2
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shorter
+      PGDATA: /data/postgres
+    volumes:
+      - data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    networks:
+      - db2
+      - migration
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    depends_on:
+      - db2
+    restart: on-failure
+    networks:
+      - migration
+      - db2
+  app:
+    container_name: shorter-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DBURL: user=postgres password=postgres dbname=shorter host=db2 sslmode=disable
+    depends_on:
+      - db2
+    networks:
+      - app
+      - db2
+    command:
+      - "d"
+  app_mem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - app_mem
+    ports:
+      - "8080:8080"
+    command:
+      - "i"
+
+networks:
+  db2:
+    driver: bridge
+  migration:
+    driver: bridge
+  app:
+    driver: bridge
+  app_mem:
+    driver: bridge
+volumes:
+  data:
